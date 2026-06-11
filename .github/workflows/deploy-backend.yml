@@ -1,0 +1,51 @@
+name: deploy-backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "deploy/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - name: Test
+        working-directory: backend
+        run: |
+          gofmt -l . && go vet ./...
+          go test ./...
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 116.62.34.224 >> ~/.ssh/known_hosts
+
+      - name: Sync code
+        run: |
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" \
+            backend/ root@116.62.34.224:~/tineng-booking/backend/
+          rsync -az -e "ssh -i ~/.ssh/deploy_key" \
+            --exclude .env --exclude certs --exclude admin-dist \
+            deploy/ root@116.62.34.224:~/tineng-booking/deploy/
+
+      - name: Build and restart api
+        run: |
+          ssh -i ~/.ssh/deploy_key root@116.62.34.224 \
+            'cd ~/tineng-booking/deploy && docker compose up -d --build api'
+
+      - name: Health check
+        run: |
+          sleep 5
+          curl -fsS https://api.goumiaomu.cn/healthz
