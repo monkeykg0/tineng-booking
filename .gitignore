@@ -1,0 +1,31 @@
+# 环境与密钥
+.env
+*.env.local
+
+# Go
+backend/bin/
+backend/*.exe
+backend/coverage.out
+
+# Node
+node_modules/
+dist/
+.cache/
+
+# Taro / umi 构建产物
+miniprogram/dist/
+admin/dist/
+admin/src/.umi*/
+
+# 证书与部署产物
+deploy/certs/*
+!deploy/certs/.gitkeep
+deploy/admin-dist/
+
+# 系统与编辑器
+.DS_Store
+.idea/
+.vscode/
+
+# Go 编译产物
+backend/api
